@@ -1,0 +1,20 @@
+{
+  "name": "claude-docker-test",
+  "version": "1.0.0",
+  "description": "Docker + Node.js + PostgreSQL test project",
+  "main": "server.js",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js"
+  },
+  "keywords": ["docker", "postgresql", "express", "nodejs"],
+  "author": "Petr Maňásek",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "pg": "^8.11.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
