@@ -10,7 +10,9 @@ const loading = document.getElementById('loading');
 const error = document.getElementById('error');
 const errorMessage = document.getElementById('error-message');
 const stats = document.getElementById('stats');
-const statsText = document.getElementById('stats-text');
+const statsTotal = document.getElementById('stats-total');
+const statsCompleted = document.getElementById('stats-completed');
+const statsPending = document.getElementById('stats-pending');
 
 // State
 let todos = [];
@@ -142,26 +144,24 @@ function renderTodos() {
 
 function createTodoElement(todo) {
     const li = document.createElement('li');
-    li.className = 'todo-item flex items-center gap-3 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200';
+    li.className = 'todo-item flex items-center gap-3 p-4 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200';
 
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.checked = todo.completed;
-    checkbox.className = 'w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer';
+    checkbox.className = 'w-5 h-5 text-gray-600 rounded focus:ring-2 focus:ring-gray-400 cursor-pointer';
     checkbox.addEventListener('change', () => toggleTodo(todo.id));
 
     const text = document.createElement('span');
-    text.className = `flex-1 text-gray-800 ${todo.completed ? 'line-through text-gray-400' : ''}`;
+    text.className = `flex-1 ${todo.completed ? 'line-through text-gray-500' : 'text-gray-800'}`;
     text.textContent = todo.title;
 
     const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'text-red-500 hover:text-red-700 font-semibold px-3 py-1 rounded hover:bg-red-50 transition-colors duration-200';
-    deleteBtn.textContent = 'Smazat';
-    deleteBtn.addEventListener('click', () => {
-        if (confirm('Opravdu chceš smazat tento úkol?')) {
-            deleteTodo(todo.id);
-        }
-    });
+    deleteBtn.className = 'text-gray-400 hover:text-red-500 transition-colors duration-200';
+    deleteBtn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+    </svg>`;
+    deleteBtn.addEventListener('click', () => deleteTodo(todo.id));
 
     li.appendChild(checkbox);
     li.appendChild(text);
@@ -175,7 +175,9 @@ function updateStats() {
     const completed = todos.filter(todo => todo.completed).length;
     const pending = total - completed;
 
-    statsText.textContent = `Celkem: ${total} | Hotovo: ${completed} | Zbývá: ${pending}`;
+    statsTotal.textContent = total;
+    statsCompleted.textContent = completed;
+    statsPending.textContent = pending;
     stats.classList.remove('hidden');
 }
 

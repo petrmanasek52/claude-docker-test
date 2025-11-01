@@ -15,29 +15,36 @@
         }
     </style>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+<body class="bg-gray-100 min-h-screen">
     <div class="container mx-auto px-4 py-8 max-w-2xl">
         <!-- Header -->
         <header class="text-center mb-8">
-            <h1 class="text-4xl font-bold text-gray-800 mb-2">📝 Todo App</h1>
-            <p class="text-gray-600">Organizuj své úkoly jednoduše a efektivně</p>
+            <div class="flex items-center justify-center gap-3 mb-3">
+                <div class="bg-green-500 rounded-xl p-3 shadow-md">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                    </svg>
+                </div>
+                <h1 class="text-5xl font-bold text-gray-900">Todo App</h1>
+            </div>
+            <p class="text-gray-600">Full-stack aplikace s Docker + PostgreSQL + Express</p>
         </header>
 
         <!-- Main Card -->
         <div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
             <!-- Add Todo Form -->
             <form id="todo-form" class="mb-6">
-                <div class="flex gap-2">
+                <div class="flex gap-3">
                     <input
                         type="text"
                         id="todo-input"
                         placeholder="Co potřebuješ udělat?"
-                        class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        class="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-700"
                         autocomplete="off"
                     />
                     <button
                         type="submit"
-                        class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg"
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-8 py-3 rounded-lg transition-colors duration-200"
                     >
                         Přidat
                     </button>
@@ -73,15 +80,17 @@
             </div>
 
             <!-- Stats Footer -->
-            <div id="stats" class="mt-6 pt-4 border-t border-gray-200 text-sm text-gray-600 text-center hidden">
-                <span id="stats-text"></span>
+            <div id="stats" class="mt-6 pt-4 border-t border-gray-200 flex justify-between text-sm text-gray-600 hidden">
+                <span>Celkem: <strong id="stats-total">0</strong></span>
+                <span>Dokončeno: <strong id="stats-completed" class="text-green-600">0</strong></span>
+                <span>Zbývá: <strong id="stats-pending" class="text-indigo-600">0</strong></span>
             </div>
         </div>
 
         <!-- Footer -->
-        <footer class="text-center text-gray-600 text-sm">
-            <p>Vytvořeno s ❤️ pomocí Claude Code</p>
-            <p class="mt-1">Node.js + Express + PostgreSQL + Tailwind CSS</p>
+        <footer class="text-center text-gray-600 text-sm mt-4">
+            <p>Vytvořeno s <span class="text-red-500">❤️</span> pomocí Claude Code</p>
+            <a href="https://github.com/petrmanasek52/claude-docker-test" target="_blank" class="text-indigo-600 hover:underline mt-1 inline-block">GitHub Repository</a>
         </footer>
     </div>
 
