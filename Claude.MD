@@ -1,44 +1,53 @@
-# Claude.MD - Dokumentace projektu
+# Claude Docker Test Project
 
-## 📋 Popis projektu
-Full-stack TODO aplikace postavená na Node.js, Express.js, PostgreSQL a Vanilla JavaScript. Projekt demonstruje moderní web development s Docker containerizací a čistým, responzivním UI designem.
+## Popis projektu
 
-## 🛠 Tech Stack
-- **Backend:** Node.js + Express.js
-- **Database:** PostgreSQL 16 (Docker container)
-- **Frontend:** Vanilla JavaScript + Tailwind CSS (CDN)
-- **Tools:** Docker, Docker Compose, GitHub CLI
-- **Package Manager:** npm
+Testovací projekt pro ověření vývojového prostředí s následujícími komponentami:
+- **Docker** pro kontejnerizaci služeb
+- **PostgreSQL 16** jako databázový systém
+- **Node.js + Express** jako aplikační server
+- **GitHub CLI** pro správu repozitáře
 
-## 🏗 Architektura
+---
 
-```
-┌─────────────────────────────────────────┐
-│         Browser (Client)                │
-│   HTML + Tailwind CSS + Vanilla JS     │
-└────────────────┬────────────────────────┘
-                 │ HTTP/REST API
-                 │
-┌────────────────▼────────────────────────┐
-│       Express Server (Backend)          │  Port 3000
-│   - REST API Endpoints                  │
-│   - Static File Serving                 │
-│   - CORS Middleware                     │
-└────────────────┬────────────────────────┘
-                 │ TCP/IP (pg driver)
-                 │
-┌────────────────▼────────────────────────┐
-│       PostgreSQL Database               │  Port 5432
-│   - todos table                         │  (Docker)
-│   - Auto migrations on startup          │
-└─────────────────────────────────────────┘
-```
+## Tech Stack
 
-## 🚀 Jak spustit
+### Backend
+- Node.js (v18+)
+- Express.js (web framework)
+- pg (PostgreSQL client)
+- nodemon (development server)
 
-### 1. Spuštění PostgreSQL
+### Database
+- PostgreSQL 16 (latest stable)
+
+### DevOps
+- Docker & Docker Compose
+- GitHub CLI (gh)
+
+---
+
+## Architektura
+
+Express Server (Port 3000) → PostgreSQL Container (Port 5432)
+
+Endpointy:
+- GET /health - health check
+- GET /api/test - test databázového připojení
+- POST /api/init - inicializace test tabulky
+- GET /api/messages - načtení zpráv z tabulky
+
+---
+
+## Jak spustit
+
+### 1. Prerekvizity
 ```bash
-docker compose up -d
+docker --version
+docker compose version
+node --version
+npm --version
+gh --version
 ```
 
 ### 2. Instalace závislostí
@@ -46,126 +55,101 @@ docker compose up -d
 npm install
 ```
 
-### 3. Spuštění serveru
+### 3. Konfigurace prostředí
+```bash
+cp .env.example .env
+```
+
+### 4. Spuštění databáze
+```bash
+docker compose up -d
+docker compose ps
+```
+
+### 5. Spuštění aplikace
 ```bash
 npm run dev
 ```
 
-## 📡 API Endpointy
-
-### Základní endpointy
-| Endpoint | Metoda | Popis |
-|----------|--------|-------|
-| `/` | GET | Uvítací zpráva a seznam endpointů |
-| `/health` | GET | Health check serveru |
-| `/api/test` | GET | Test DB připojení |
-
-### TODO API
-| Endpoint | Metoda | Popis | Request Body | Response |
-|----------|--------|-------|--------------|----------|
-| `/api/todos` | GET | Získat všechny todos | - | `{success: boolean, data: Todo[]}` |
-| `/api/todos` | POST | Vytvořit nové todo | `{title: string}` | `{success: boolean, data: Todo}` |
-| `/api/todos/:id` | PATCH | Přepnout completed status | - | `{success: boolean, data: Todo}` |
-| `/api/todos/:id` | DELETE | Smazat todo | - | `{success: boolean, message: string}` |
-
-**Todo objekt:**
-```json
-{
-  "id": 1,
-  "title": "Vyzkoušet TODO aplikaci",
-  "completed": false,
-  "created_at": "2025-10-06T12:00:00.000Z"
-}
-```
-
-**Error Response:**
-```json
-{
-  "success": false,
-  "message": "Error message",
-  "error": "Detailed error (optional)"
-}
-```
-
-## 🔧 Příkazy
-
-### Docker
+### 6. Test endpointů
 ```bash
-docker compose up -d          # Spustit services
-docker compose down           # Zastavit services
-docker compose logs postgres  # Zobrazit logy
-docker ps                     # Seznam běžících kontejnerů
+curl http://localhost:3000/health
+curl http://localhost:3000/api/test
 ```
 
-### GitHub CLI
+---
+
+## Příkazy a Troubleshooting
+
+### Docker příkazy
 ```bash
-gh repo view --web           # Otevřít repo v browseru
-gh repo list                 # Seznam repozitářů
-gh auth status               # Status autentizace
+# Start služeb
+docker compose up -d
+
+# Stop služeb
+docker compose down
+
+# Restart služeb
+docker compose restart
+
+# Zobrazení logů
+docker compose logs -f
+
+# Vyčištění dat
+docker compose down -v
 ```
 
-## 🐛 Troubleshooting
-
-### PostgreSQL se nepřipojí
+### Databázové příkazy
 ```bash
-docker compose logs postgres
-docker compose restart postgres
+# Přímé připojení
+docker compose exec postgres psql -U testuser -d testdb
+
+# Export databáze
+docker compose exec postgres pg_dump -U testuser testdb > backup.sql
+
+# Import databáze
+docker compose exec -T postgres psql -U testuser testdb < backup.sql
 ```
 
-### Port 5432 je obsazený
+### Časté problémy
+
+**1. Port 5432 already in use**
 ```bash
 sudo lsof -i :5432
-docker compose down
+# Nebo změňte port v docker-compose.yml
 ```
 
-### Node.js dependency chyby
+**2. Connection refused**
 ```bash
-rm -rf node_modules package-lock.json
-npm install
+docker compose ps
+docker compose restart postgres
+docker compose exec postgres pg_isready -U testuser
 ```
 
-## 📝 Environment Variables
+**3. Node.js nepřipojí k databázi**
+- Zkontrolujte .env konfiguraci
+- Z hosta použijte: localhost
+- Z Docker kontejneru: postgres
 
-Vytvořte `.env` soubor podle `.env.example`:
-```env
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=postgres
-DB_NAME=testdb
-PORT=3000
-```
+---
 
-## 🗄️ Databáze
+## Environment Variables
 
-### Struktura tabulky `todos`
-```sql
-CREATE TABLE todos (
-    id SERIAL PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    completed BOOLEAN DEFAULT false,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+| Proměnná        | Výchozí hodnota | Popis                    |
+|-----------------|-----------------|--------------------------|
+| DB_HOST         | localhost       | PostgreSQL host          |
+| DB_PORT         | 5432            | PostgreSQL port          |
+| DB_USER         | testuser        | Databázový uživatel      |
+| DB_PASSWORD     | testpass        | Databázové heslo         |
+| DB_NAME         | testdb          | Název databáze           |
+| PORT            | 3000            | Port Express serveru     |
 
-### Automatické migrace
-SQL migrace v složce `migrations/` se automaticky spustí při prvním startu PostgreSQL containeru díky volume mappingu v `docker-compose.yml`.
+---
 
-## 🎨 Frontend
+## Autor
 
-### Struktura
-```
-public/
-├── index.html  - HTML struktura s Tailwind CSS
-└── app.js      - Vanilla JavaScript logika
-```
+Petr Maňásek (petrmanasek52@gmail.com)
 
-### Features
-- ✅ Responzivní design (mobile-first)
-- ✅ Real-time aktualizace UI
-- ✅ Loading states
-- ✅ Error handling s automatickým skrytím
-- ✅ Prázdný stát když nejsou žádné todos
-- ✅ Statistiky (celkem/hotovo/zbývá)
-- ✅ Animace při přidání todo
-- ✅ Potvrzení před smazáním
+## Licence
+
+MIT License

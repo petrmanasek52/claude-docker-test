@@ -1,7 +1,6 @@
+require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
 const { Pool } = require('pg');
-const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10,201 +9,173 @@ const PORT = process.env.PORT || 3000;
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
   port: process.env.DB_PORT || 5432,
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
+  user: process.env.DB_USER || 'testuser',
+  password: process.env.DB_PASSWORD || 'testpass',
   database: process.env.DB_NAME || 'testdb',
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
 });
 
 // Middleware
-app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+
+// Logging middleware
+app.use((req, res, next) => {
+  const now = new Date().toISOString();
+  console.log('[' + now + '] ' + req.method + ' ' + req.path);
+  next();
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
+  res.json({
+    status: 'ok',
     timestamp: new Date().toISOString(),
-    service: 'claude-docker-test'
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development'
   });
 });
 
 // Database connection test endpoint
 app.get('/api/test', async (req, res) => {
+  let client;
+
   try {
-    const result = await pool.query('SELECT NOW() as current_time, version() as pg_version');
-    res.status(200).json({
-      success: true,
-      message: 'Database connection successful',
-      data: result.rows[0]
+    client = await pool.connect();
+    const result = await client.query('SELECT NOW() as current_time, version() as pg_version');
+
+    res.json({
+      message: 'Database connected successfully',
+      time: result.rows[0].current_time,
+      postgresql_version: result.rows[0].pg_version,
+      connection_info: {
+        host: process.env.DB_HOST || 'localhost',
+        port: process.env.DB_PORT || 5432,
+        database: process.env.DB_NAME || 'testdb',
+        user: process.env.DB_USER || 'testuser'
+      }
     });
+
   } catch (error) {
-    console.error('Database error:', error);
+    console.error('Database connection error:', error);
     res.status(500).json({
-      success: false,
-      message: 'Database connection failed',
-      error: error.message
+      error: 'Database connection failed',
+      message: error.message,
+      code: error.code,
+      hint: 'Make sure PostgreSQL is running: docker compose up -d'
     });
+
+  } finally {
+    if (client) {
+      client.release();
+    }
   }
 });
 
-// ============ TODO API ENDPOINTS ============
+// Create a test table and insert data
+app.post('/api/init', async (req, res) => {
+  let client;
 
-// GET /api/todos - Get all todos
-app.get('/api/todos', async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT * FROM todos ORDER BY created_at DESC'
-    );
-    res.status(200).json({
-      success: true,
-      data: result.rows
+    client = await pool.connect();
+    await client.query('CREATE TABLE IF NOT EXISTS test_messages (id SERIAL PRIMARY KEY, message TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)');
+    await client.query("INSERT INTO test_messages (message) VALUES ('Hello from Claude Docker Test!')");
+
+    res.json({
+      message: 'Database initialized successfully',
+      table_created: 'test_messages'
     });
+
   } catch (error) {
-    console.error('Error fetching todos:', error);
+    console.error('Database initialization error:', error);
     res.status(500).json({
-      success: false,
-      message: 'Failed to fetch todos',
-      error: error.message
+      error: 'Database initialization failed',
+      message: error.message
     });
+
+  } finally {
+    if (client) {
+      client.release();
+    }
   }
 });
 
-// POST /api/todos - Create new todo
-app.post('/api/todos', async (req, res) => {
-  try {
-    const { title } = req.body;
+// Get all messages from test table
+app.get('/api/messages', async (req, res) => {
+  let client;
 
-    // Validation
-    if (!title || title.trim() === '') {
-      return res.status(400).json({
-        success: false,
-        message: 'Title is required and cannot be empty'
+  try {
+    client = await pool.connect();
+    const result = await client.query('SELECT * FROM test_messages ORDER BY created_at DESC');
+
+    res.json({
+      count: result.rows.length,
+      messages: result.rows
+    });
+
+  } catch (error) {
+    console.error('Query error:', error);
+    if (error.code === '42P01') {
+      res.status(404).json({
+        error: 'Table not found',
+        message: 'Run POST /api/init to create the test table first',
+        code: error.code
+      });
+    } else {
+      res.status(500).json({
+        error: 'Query failed',
+        message: error.message
       });
     }
 
-    const result = await pool.query(
-      'INSERT INTO todos (title) VALUES ($1) RETURNING *',
-      [title.trim()]
-    );
-
-    res.status(201).json({
-      success: true,
-      data: result.rows[0]
-    });
-  } catch (error) {
-    console.error('Error creating todo:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create todo',
-      error: error.message
-    });
+  } finally {
+    if (client) {
+      client.release();
+    }
   }
 });
 
-// PATCH /api/todos/:id - Toggle completed status
-app.patch('/api/todos/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Validation
-    if (!id || isNaN(parseInt(id))) {
-      return res.status(400).json({
-        success: false,
-        message: 'Valid todo ID is required'
-      });
-    }
-
-    const result = await pool.query(
-      'UPDATE todos SET completed = NOT completed WHERE id = $1 RETURNING *',
-      [parseInt(id)]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Todo not found'
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      data: result.rows[0]
-    });
-  } catch (error) {
-    console.error('Error updating todo:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update todo',
-      error: error.message
-    });
-  }
-});
-
-// DELETE /api/todos/:id - Delete todo
-app.delete('/api/todos/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Validation
-    if (!id || isNaN(parseInt(id))) {
-      return res.status(400).json({
-        success: false,
-        message: 'Valid todo ID is required'
-      });
-    }
-
-    const result = await pool.query(
-      'DELETE FROM todos WHERE id = $1 RETURNING *',
-      [parseInt(id)]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Todo not found'
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: 'Todo deleted successfully',
-      data: result.rows[0]
-    });
-  } catch (error) {
-    console.error('Error deleting todo:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete todo',
-      error: error.message
-    });
-  }
-});
-
-// Root endpoint
-app.get('/', (req, res) => {
-  res.json({
-    message: 'Welcome to Claude Docker Test API',
-    endpoints: {
-      health: '/health',
-      test: '/api/test',
-      todos: '/api/todos'
-    }
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'Not found',
+    path: req.path,
+    available_endpoints: ['GET /health', 'GET /api/test', 'POST /api/init', 'GET /api/messages']
   });
 });
 
-// Error handling middleware
+// Error handler
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('Unhandled error:', err);
   res.status(500).json({
-    success: false,
-    message: 'Internal server error',
-    error: err.message
+    error: 'Internal server error',
+    message: err.message
   });
 });
 
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, closing HTTP server and database pool...');
+  await pool.end();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  console.log('SIGINT received, closing HTTP server and database pool...');
+  await pool.end();
+  process.exit(0);
+});
+
+// Start server
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Health check: http://localhost:${PORT}/health`);
-  console.log(`Database test: http://localhost:${PORT}/api/test`);
+  console.log('=' * 60);
+  console.log('Server is running on http://localhost:' + PORT);
+  console.log('=' * 60);
+  console.log('Available endpoints:');
+  console.log('  GET  http://localhost:' + PORT + '/health');
+  console.log('  GET  http://localhost:' + PORT + '/api/test');
+  console.log('  POST http://localhost:' + PORT + '/api/init');
+  console.log('  GET  http://localhost:' + PORT + '/api/messages');
+  console.log('=' * 60);
 });

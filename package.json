@@ -1,21 +1,31 @@
 {
   "name": "claude-docker-test",
   "version": "1.0.0",
-  "description": "Docker + Node.js + PostgreSQL test project",
+  "description": "Test project for Docker + Node.js + PostgreSQL development environment",
   "main": "server.js",
   "scripts": {
+    "start": "node server.js",
     "dev": "nodemon server.js",
-    "start": "node server.js"
+    "test": "echo \"No tests yet - add Jest or Mocha\" && exit 0"
   },
-  "keywords": ["docker", "postgresql", "express", "nodejs"],
-  "author": "Petr Maňásek",
+  "keywords": [
+    "docker",
+    "postgresql",
+    "express",
+    "nodejs"
+  ],
+  "author": "Petr Maňásek <petrmanasek52@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.18.2",
-    "pg": "^8.11.3"
+    "express": "^4.21.2",
+    "pg": "^8.13.1",
+    "dotenv": "^16.4.7"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "nodemon": "^3.1.9"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   }
 }
