@@ -169,13 +169,13 @@ process.on('SIGINT', async () => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log('=' * 60);
+  console.log('='.repeat(60));
   console.log('Server is running on http://localhost:' + PORT);
-  console.log('=' * 60);
+  console.log('='.repeat(60));
   console.log('Available endpoints:');
   console.log('  GET  http://localhost:' + PORT + '/health');
   console.log('  GET  http://localhost:' + PORT + '/api/test');
   console.log('  POST http://localhost:' + PORT + '/api/init');
   console.log('  GET  http://localhost:' + PORT + '/api/messages');
-  console.log('=' * 60);
+  console.log('='.repeat(60));
 });
