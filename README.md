@@ -1,6 +1,6 @@
-# Claude Docker Test Project
+# Claude Docker Test Project - Full-Stack TODO App
 
-Simple test project to verify your development environment setup with Docker, Node.js, PostgreSQL, and GitHub CLI.
+Modern full-stack TODO application built with Node.js, Express, PostgreSQL, and Vanilla JavaScript. Features a clean REST API and responsive UI with Tailwind CSS.
 
 ## Quick Start
 
@@ -17,17 +17,123 @@ docker compose up -d
 # 4. Start development server
 npm run dev
 
-# 5. Test the application
-curl http://localhost:3000/health
-curl http://localhost:3000/api/test
+# 5. Open in browser
+# Visit: http://localhost:3000
 ```
 
-## Available Endpoints
+## Features
 
-- `GET /health` - Health check
-- `GET /api/test` - Test database connection
-- `POST /api/init` - Initialize test table
-- `GET /api/messages` - Get all messages from test table
+- ✅ Create, read, update, and delete TODO items
+- ✅ Mark TODOs as completed/incomplete
+- ✅ Responsive design (mobile-friendly)
+- ✅ Real-time UI updates
+- ✅ Loading states and error handling
+- ✅ PostgreSQL database with migrations
+- ✅ RESTful API architecture
+
+## API Reference
+
+### Health Check
+```bash
+GET /health
+```
+Returns server status and uptime.
+
+### Get All TODOs
+```bash
+GET /api/todos
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "title": "My first TODO",
+      "completed": false,
+      "created_at": "2025-11-01T12:00:00.000Z"
+    }
+  ]
+}
+```
+
+### Create TODO
+```bash
+POST /api/todos
+Content-Type: application/json
+
+{
+  "title": "Buy groceries"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 2,
+    "title": "Buy groceries",
+    "completed": false,
+    "created_at": "2025-11-01T12:00:00.000Z"
+  },
+  "message": "Todo created successfully"
+}
+```
+
+**Validation:**
+- `title` is required and cannot be empty
+- Returns `400` if validation fails
+
+### Toggle TODO Completion
+```bash
+PATCH /api/todos/:id
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "title": "My first TODO",
+    "completed": true,
+    "created_at": "2025-11-01T12:00:00.000Z"
+  },
+  "message": "Todo updated successfully"
+}
+```
+
+**Error Responses:**
+- `400` - Invalid ID
+- `404` - TODO not found
+- `500` - Database error
+
+### Delete TODO
+```bash
+DELETE /api/todos/:id
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "title": "My first TODO",
+    "completed": false,
+    "created_at": "2025-11-01T12:00:00.000Z"
+  },
+  "message": "Todo deleted successfully"
+}
+```
+
+**Error Responses:**
+- `400` - Invalid ID
+- `404` - TODO not found
+- `500` - Database error
 
 ## Project Structure
 
@@ -37,10 +143,31 @@ curl http://localhost:3000/api/test
 ├── README.md              # This file
 ├── docker-compose.yml     # Docker services configuration
 ├── package.json           # Node.js dependencies
-├── server.js              # Express application
+├── server.js              # Express API server
+├── public/                # Frontend files
+│   ├── index.html         # Main HTML with Tailwind CSS
+│   └── app.js             # JavaScript (CRUD operations)
+├── migrations/            # Database migrations
+│   └── 001_create_todos.sql
 ├── .env.example           # Environment variables template
 └── .gitignore            # Git ignore rules
 ```
+
+## Tech Stack
+
+**Backend:**
+- Node.js + Express.js
+- PostgreSQL 16
+- pg (node-postgres)
+
+**Frontend:**
+- Vanilla JavaScript (no frameworks)
+- Tailwind CSS (CDN)
+- Fetch API
+
+**DevOps:**
+- Docker & Docker Compose
+- Automated database migrations
 
 ## Requirements
 

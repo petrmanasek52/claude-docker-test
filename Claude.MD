@@ -2,10 +2,11 @@
 
 ## Popis projektu
 
-Testovací projekt pro ověření vývojového prostředí s následujícími komponentami:
+Full-stack TODO aplikace s následujícími komponentami:
 - **Docker** pro kontejnerizaci služeb
 - **PostgreSQL 16** jako databázový systém
-- **Node.js + Express** jako aplikační server
+- **Node.js + Express** jako aplikační server s REST API
+- **Vanilla JavaScript** frontend s Tailwind CSS
 - **GitHub CLI** pro správu repozitáře
 
 ---
@@ -18,6 +19,11 @@ Testovací projekt pro ověření vývojového prostředí s následujícími ko
 - pg (PostgreSQL client)
 - nodemon (development server)
 
+### Frontend
+- Vanilla JavaScript (žádné frameworky)
+- Tailwind CSS (z CDN)
+- Fetch API pro komunikaci s backendem
+
 ### Database
 - PostgreSQL 16 (latest stable)
 
@@ -29,13 +35,33 @@ Testovací projekt pro ověření vývojového prostředí s následujícími ko
 
 ## Architektura
 
-Express Server (Port 3000) → PostgreSQL Container (Port 5432)
+```
+Frontend (public/) → Express Server (Port 3000) → PostgreSQL Container (Port 5432)
+```
 
-Endpointy:
-- GET /health - health check
-- GET /api/test - test databázového připojení
-- POST /api/init - inicializace test tabulky
-- GET /api/messages - načtení zpráv z tabulky
+### REST API Endpointy:
+
+**Health Check:**
+- `GET /health` - Kontrola stavu serveru
+
+**TODO API:**
+- `GET /api/todos` - Vrátí všechny TODO items seřazené podle created_at DESC
+- `POST /api/todos` - Vytvoří nové TODO (body: `{title: string}`)
+- `PATCH /api/todos/:id` - Přepne completed status TODO
+- `DELETE /api/todos/:id` - Smaže TODO
+
+**API Response Format:**
+```json
+{
+  "success": true,
+  "data": { /* ... */ },
+  "message": "Optional message"
+}
+```
+
+### Frontend Struktura:
+- `public/index.html` - Hlavní HTML s Tailwind CSS
+- `public/app.js` - JavaScript logika (CRUD operace, state management)
 
 ---
 
@@ -71,10 +97,29 @@ docker compose ps
 npm run dev
 ```
 
-### 6. Test endpointů
+### 6. Otevřít aplikaci v prohlížeči
+```
+http://localhost:3000
+```
+
+### 7. Test API endpointů (volitelné)
 ```bash
+# Health check
 curl http://localhost:3000/health
-curl http://localhost:3000/api/test
+
+# Získat všechny TODO items
+curl http://localhost:3000/api/todos
+
+# Vytvořit nové TODO
+curl -X POST http://localhost:3000/api/todos \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Moje nové TODO"}'
+
+# Přepnout completed status
+curl -X PATCH http://localhost:3000/api/todos/1
+
+# Smazat TODO
+curl -X DELETE http://localhost:3000/api/todos/1
 ```
 
 ---

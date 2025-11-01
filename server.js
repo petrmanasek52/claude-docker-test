@@ -19,6 +19,7 @@ const pool = new Pool({
 
 // Middleware
 app.use(express.json());
+app.use(express.static('public')); // Serve static files from public directory
 
 // Logging middleware
 app.use((req, res, next) => {
@@ -37,33 +38,27 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Database connection test endpoint
-app.get('/api/test', async (req, res) => {
+// TODO API Endpoints
+
+// GET /api/todos - Get all todos
+app.get('/api/todos', async (req, res) => {
   let client;
 
   try {
     client = await pool.connect();
-    const result = await client.query('SELECT NOW() as current_time, version() as pg_version');
+    const result = await client.query('SELECT * FROM todos ORDER BY created_at DESC');
 
     res.json({
-      message: 'Database connected successfully',
-      time: result.rows[0].current_time,
-      postgresql_version: result.rows[0].pg_version,
-      connection_info: {
-        host: process.env.DB_HOST || 'localhost',
-        port: process.env.DB_PORT || 5432,
-        database: process.env.DB_NAME || 'testdb',
-        user: process.env.DB_USER || 'testuser'
-      }
+      success: true,
+      data: result.rows
     });
 
   } catch (error) {
-    console.error('Database connection error:', error);
+    console.error('Error fetching todos:', error);
     res.status(500).json({
-      error: 'Database connection failed',
-      message: error.message,
-      code: error.code,
-      hint: 'Make sure PostgreSQL is running: docker compose up -d'
+      success: false,
+      message: 'Failed to fetch todos',
+      error: error.message
     });
 
   } finally {
@@ -73,25 +68,38 @@ app.get('/api/test', async (req, res) => {
   }
 });
 
-// Create a test table and insert data
-app.post('/api/init', async (req, res) => {
+// POST /api/todos - Create new todo
+app.post('/api/todos', async (req, res) => {
+  const { title } = req.body;
   let client;
+
+  // Validation
+  if (!title || title.trim() === '') {
+    return res.status(400).json({
+      success: false,
+      message: 'Title is required and cannot be empty'
+    });
+  }
 
   try {
     client = await pool.connect();
-    await client.query('CREATE TABLE IF NOT EXISTS test_messages (id SERIAL PRIMARY KEY, message TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)');
-    await client.query("INSERT INTO test_messages (message) VALUES ('Hello from Claude Docker Test!')");
+    const result = await client.query(
+      'INSERT INTO todos (title) VALUES ($1) RETURNING *',
+      [title.trim()]
+    );
 
     res.json({
-      message: 'Database initialized successfully',
-      table_created: 'test_messages'
+      success: true,
+      data: result.rows[0],
+      message: 'Todo created successfully'
     });
 
   } catch (error) {
-    console.error('Database initialization error:', error);
+    console.error('Error creating todo:', error);
     res.status(500).json({
-      error: 'Database initialization failed',
-      message: error.message
+      success: false,
+      message: 'Failed to create todo',
+      error: error.message
     });
 
   } finally {
@@ -101,33 +109,96 @@ app.post('/api/init', async (req, res) => {
   }
 });
 
-// Get all messages from test table
-app.get('/api/messages', async (req, res) => {
+// PATCH /api/todos/:id - Toggle completed status
+app.patch('/api/todos/:id', async (req, res) => {
+  const { id } = req.params;
   let client;
+
+  // Validation
+  if (!id || isNaN(parseInt(id))) {
+    return res.status(400).json({
+      success: false,
+      message: 'Valid todo ID is required'
+    });
+  }
 
   try {
     client = await pool.connect();
-    const result = await client.query('SELECT * FROM test_messages ORDER BY created_at DESC');
+
+    // Toggle the completed status
+    const result = await client.query(
+      'UPDATE todos SET completed = NOT completed WHERE id = $1 RETURNING *',
+      [parseInt(id)]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Todo not found'
+      });
+    }
 
     res.json({
-      count: result.rows.length,
-      messages: result.rows
+      success: true,
+      data: result.rows[0],
+      message: 'Todo updated successfully'
     });
 
   } catch (error) {
-    console.error('Query error:', error);
-    if (error.code === '42P01') {
-      res.status(404).json({
-        error: 'Table not found',
-        message: 'Run POST /api/init to create the test table first',
-        code: error.code
-      });
-    } else {
-      res.status(500).json({
-        error: 'Query failed',
-        message: error.message
+    console.error('Error updating todo:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update todo',
+      error: error.message
+    });
+
+  } finally {
+    if (client) {
+      client.release();
+    }
+  }
+});
+
+// DELETE /api/todos/:id - Delete todo
+app.delete('/api/todos/:id', async (req, res) => {
+  const { id } = req.params;
+  let client;
+
+  // Validation
+  if (!id || isNaN(parseInt(id))) {
+    return res.status(400).json({
+      success: false,
+      message: 'Valid todo ID is required'
+    });
+  }
+
+  try {
+    client = await pool.connect();
+    const result = await client.query(
+      'DELETE FROM todos WHERE id = $1 RETURNING *',
+      [parseInt(id)]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Todo not found'
       });
     }
+
+    res.json({
+      success: true,
+      data: result.rows[0],
+      message: 'Todo deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Error deleting todo:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete todo',
+      error: error.message
+    });
 
   } finally {
     if (client) {
@@ -141,7 +212,13 @@ app.use((req, res) => {
   res.status(404).json({
     error: 'Not found',
     path: req.path,
-    available_endpoints: ['GET /health', 'GET /api/test', 'POST /api/init', 'GET /api/messages']
+    available_endpoints: [
+      'GET /health',
+      'GET /api/todos',
+      'POST /api/todos',
+      'PATCH /api/todos/:id',
+      'DELETE /api/todos/:id'
+    ]
   });
 });
 
@@ -170,12 +247,15 @@ process.on('SIGINT', async () => {
 // Start server
 app.listen(PORT, () => {
   console.log('='.repeat(60));
-  console.log('Server is running on http://localhost:' + PORT);
+  console.log('TODO App Server is running on http://localhost:' + PORT);
   console.log('='.repeat(60));
   console.log('Available endpoints:');
-  console.log('  GET  http://localhost:' + PORT + '/health');
-  console.log('  GET  http://localhost:' + PORT + '/api/test');
-  console.log('  POST http://localhost:' + PORT + '/api/init');
-  console.log('  GET  http://localhost:' + PORT + '/api/messages');
+  console.log('  GET    http://localhost:' + PORT + '/health');
+  console.log('  GET    http://localhost:' + PORT + '/api/todos');
+  console.log('  POST   http://localhost:' + PORT + '/api/todos');
+  console.log('  PATCH  http://localhost:' + PORT + '/api/todos/:id');
+  console.log('  DELETE http://localhost:' + PORT + '/api/todos/:id');
+  console.log('='.repeat(60));
+  console.log('Frontend: http://localhost:' + PORT);
   console.log('='.repeat(60));
 });
